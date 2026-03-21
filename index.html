@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NEON QUEST</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(#0a0f1e, #1a2a3f);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', 'VT323', monospace;
+            overflow: hidden;
+        }
+
+        /* Main layout: left panel | game canvas | right panel */
+        .app-layout {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            padding: 20px;
+            width: 100%;
+            height: 100vh;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        /* Left panel – stats (fixed width) */
+        .left-panel {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(14px);
+            border-radius: 28px;
+            padding: 20px;
+            width: 280px;
+            border: 2px solid #ffaa44;
+            box-shadow: 0 0 30px rgba(255, 170, 68, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            padding: 12px 16px;
+        }
+
+        .stat-title {
+            font-size: 0.9rem;
+            color: #ffaa88;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #ffefcf;
+            text-shadow: 0 0 5px #ffaa44;
+        }
+
+        .karma-bar, .health-bar {
+            width: 100%;
+            height: 16px;
+            background: #111;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 8px;
+            border: 1px solid #444;
+        }
+
+        .karma-fill {
+            height: 100%;
+            transition: width 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .health-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #e74c3c, #ff3366);
+        }
+
+        .inventory-list {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            color: #ffdd99;
+            margin-top: 8px;
+        }
+
+        .inventory-item {
+            padding: 4px 8px;
+            border-bottom: 1px solid #ffaa5544;
+        }
+
+        .inventory-btn {
+            background: linear-gradient(#ffaa44, #ffcc66);
+            color: #1e2a2f;
+            padding: 8px 16px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.2s;
+            margin-top: 12px;
+        }
+
+        .inventory-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px #ffcc66;
+        }
+
+        /* Right panel – objective (fixed width) */
+        .right-panel {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(14px);
+            border-radius: 28px;
+            padding: 20px;
+            width: 320px;
+            border: 2px solid #ffaa44;
+            box-shadow: 0 0 30px rgba(255, 170, 68, 0.4);
+            flex-shrink: 0;
+        }
+
+        .objective-box {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .objective-title {
+            font-size: 0.9rem;
+            color: #ffaa88;
+            margin-bottom: 8px;
+        }
+
+        .objective-text {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff5e0;
+            text-shadow: 0 0 5px #ffaa44;
+        }
+
+        .info-area {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            padding: 16px;
+        }
+
+        .interact-hint-static {
+            background: #ffaa44;
+            color: #1e2a2f;
+            padding: 8px 12px;
+            border-radius: 40px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 1rem;
+        }
+
+        .controls-tip-static {
+            font-size: 0.7rem;
+            color: #ccc;
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        /* Game container – expands to fill remaining space */
+        .game-container {
+            position: relative;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 0 80px rgba(255, 170, 68, 0.7), 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 5px solid #ffcc66;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0f2a1f;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 24px;
+        }
+
+        /* Modal overlays */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: #1e2a36;
+            border-radius: 28px;
+            padding: 28px;
+            min-width: 340px;
+            max-width: 520px;
+            border: 3px solid #ffaa44;
+            color: #ffefcf;
+            box-shadow: 0 0 50px rgba(255, 170, 68, 0.9);
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            font-size: 1.55rem;
+            text-align: center;
+            text-shadow: 0 0 12px #ffaa44;
+        }
+
+        .pizza-option, .dialogue-option, .inventory-item-modal, .quest-choice {
+            background: #2c3e50;
+            margin: 14px 0;
+            padding: 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #ffaa55;
+            box-shadow: 0 0 12px rgba(255, 170, 68, 0.4);
+        }
+
+        .pizza-option:hover, .dialogue-option:hover, .inventory-item-modal:hover, .quest-choice:hover {
+            background: #ffaa55;
+            color: #1e2a2f;
+            transform: scale(1.06) translateY(-4px);
+            box-shadow: 0 0 30px #ffcc66;
+        }
+
+        .dialogue-option.selected {
+            background: #ffcc66;
+            color: #1e2a2f;
+            border: 3px solid #fff;
+            box-shadow: 0 0 25px gold;
+        }
+
+        .close-btn {
+            background: #444;
+            margin-top: 18px;
+            text-align: center;
+            padding: 12px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #666;
+            transform: scale(1.04);
+        }
+
+        .dialogue-text {
+            background: #0a0f1e;
+            padding: 18px;
+            border-radius: 22px;
+            margin-bottom: 20px;
+            font-size: 1.08rem;
+            border: 1px solid #ffaa44;
+        }
+
+        /* Karma feedback */
+        .karma-feedback {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(14px);
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.4rem;
+            z-index: 2000;
+            pointer-events: none;
+            white-space: nowrap;
+            animation: fadeOutUp 2.4s forwards;
+            border: 2px solid;
+            box-shadow: 0 0 30px currentColor;
+        }
+
+        .karma-feedback.positive {
+            color: #2ecc71;
+            border-color: #2ecc71;
+        }
+
+        .karma-feedback.negative {
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        @keyframes fadeOutUp {
+            0% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            70% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(-35px);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-70px);
+                visibility: hidden;
+            }
+        }
+
+        .inventory-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .inventory-list::-webkit-scrollbar-track {
+            background: #222;
+            border-radius: 3px;
+        }
+        .inventory-list::-webkit-scrollbar-thumb {
+            background: #ffaa55;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+
+<script>
+    // ==============================================
+    // 1. GAME CONSTANTS (LARGER WORLD)
+    // ==============================================
+    const WORLD_WIDTH = 1280;
+    const WORLD_HEIGHT = 720;
+
+    const PIZZA_MENU = [
+        { name: "Veggie Pizza", price: 10, id: "veggie" },
+        { name: "Pepperoni Pizza", price: 12, id: "pepperoni" },
+        { name: "BBQ Chicken Pizza", price: 15, id: "bbq" }
+    ];
+
+    const KARMA_GOOD = 66;
+    const KARMA_EVIL = 34;
+
+    // ==============================================
+    // 2. PIXI GAME WORLD (Scaled to fit container)
+    // ==============================================
+    class GameWorld {
+        constructor(app, interactablesData, onInteract, onUpdateProximityHint, isAnyModalOpenRef) {
+            this.app = app;
+            this.interactablesData = interactablesData;
+            this.onInteract = onInteract;
+            this.onUpdateProximityHint = onUpdateProximityHint;
+            this.isAnyModalOpenRef = isAnyModalOpenRef;
+
+            this.player = { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2, radius: 16, speed: 5.1 };
+            this.playerOffsetY = 0;
+            this.highlightedGraphic = null;
+            this.closestItem = null;
+
+            this.keys = { KeyW: false, KeyS: false, KeyA: false, KeyD: false, KeyE: false };
+            this.interactPressed = false;
+            this._onKeyDown = this._onKeyDown.bind(this);
+            this._onKeyUp = this._onKeyUp.bind(this);
+            window.addEventListener('keydown', this._onKeyDown);
+            window.addEventListener('keyup', this._onKeyUp);
+
+            this.playerGraphic = null;
+            this.interactableGraphics = new Map();
+            this.bobPhases = new Map();
+            this.highlightRing = null;
+
+            this.initGraphics();
+            this.app.ticker.add(() => this.update());
+        }
+
+        initGraphics() {
+            // Player
+            this.playerGraphic = new PIXI.Graphics();
+            this.playerGraphic.lineStyle(3.5, 0x000000, 0.95);
+            this.playerGraphic.beginFill(0x3a86ff);
+            this.playerGraphic.drawCircle(0, 0, this.player.radius);
+            this.playerGraphic.endFill();
+            this.playerGraphic.beginFill(0xffffff);
+            this.playerGraphic.drawCircle(-6.5, -5, 4.2);
+            this.playerGraphic.drawCircle(6.5, -5, 4.2);
+            this.playerGraphic.endFill();
+            this.playerGraphic.beginFill(0x0a0f1e);
+            this.playerGraphic.drawCircle(-6.5, -5, 1.9);
+            this.playerGraphic.drawCircle(6.5, -5, 1.9);
+            this.playerGraphic.endFill();
+            this.playerGraphic.position.set(this.player.x, this.player.y);
+            this.app.stage.addChild(this.playerGraphic);
+
+            // Interactables
+            this.interactablesData.forEach(item => {
+                const graphic = new PIXI.Graphics();
+                const isNPC = ['npc', 'mrsGino', 'tommy'].includes(item.id);
+
+                if (isNPC) {
+                    graphic.lineStyle(4.5, 0x111111, 0.9);
+                    graphic.beginFill(item.color);
+                    graphic.drawCircle(0, 0, item.radius);
+                    graphic.endFill();
+
+                    const icon = new PIXI.Text(item.icon, { fontSize: 28, fill: 0xffffff, dropShadow: true, dropShadowBlur: 5, dropShadowDistance: 3 });
+                    icon.anchor.set(0.5);
+                    icon.position.set(0, -9);
+                    graphic.addChild(icon);
+
+                    const label = new PIXI.Text(item.name, { fontSize: 15, fill: 0xffffff, fontWeight: "bold", dropShadow: true, dropShadowBlur: 5, dropShadowDistance: 3 });
+                    label.anchor.set(0.5);
+                    label.position.set(0, -item.radius - 22);
+                    graphic.addChild(label);
+                } else {
+                    graphic.lineStyle(4, 0x111111, 0.9);
+                    graphic.beginFill(item.color);
+                    graphic.drawRect(-item.radius, -item.radius, item.radius * 2, item.radius * 2);
+                    graphic.endFill();
+
+                    const icon = new PIXI.Text(item.icon, { fontSize: 32, fill: 0xffffff, dropShadow: true, dropShadowBlur: 5 });
+                    icon.anchor.set(0.5);
+                    graphic.addChild(icon);
+
+                    const label = new PIXI.Text(item.name, { fontSize: 14, fill: 0xffffff, fontWeight: "bold", dropShadow: true });
+                    label.anchor.set(0.5);
+                    label.position.set(0, item.radius + 18);
+                    graphic.addChild(label);
+                }
+
+                graphic.position.set(item.x, item.y);
+                this.app.stage.addChild(graphic);
+                this.interactableGraphics.set(item.id, graphic);
+
+                if (isNPC) this.bobPhases.set(item.id, Math.random() * Math.PI * 2);
+            });
+
+            // Highlight ring
+            this.highlightRing = new PIXI.Graphics();
+            this.app.stage.addChild(this.highlightRing);
+
+            // Background grid
+            const grid = new PIXI.Graphics();
+            grid.lineStyle(1, 0x88aadd, 0.22);
+            for (let i = 0; i < WORLD_WIDTH; i += 45) {
+                grid.moveTo(i, 0);
+                grid.lineTo(i, WORLD_HEIGHT);
+                grid.moveTo(0, i);
+                grid.lineTo(WORLD_WIDTH, i);
+            }
+            this.app.stage.addChildAt(grid, 0);
+        }
+
+        _onKeyDown(e) {
+            const code = e.code;
+            if (this.keys.hasOwnProperty(code)) {
+                this.keys[code] = true;
+                if (code === 'KeyE') this.interactPressed = true;
+                e.preventDefault();
+            }
+            if (code === 'ArrowUp' || code === 'ArrowDown' || code === 'ArrowLeft' || code === 'ArrowRight') {
+                e.preventDefault();
+            }
+        }
+
+        _onKeyUp(e) {
+            const code = e.code;
+            if (this.keys.hasOwnProperty(code)) this.keys[code] = false;
+        }
+
+        isMoveUp() { return this.keys.KeyW; }
+        isMoveDown() { return this.keys.KeyS; }
+        isMoveLeft() { return this.keys.KeyA; }
+        isMoveRight() { return this.keys.KeyD; }
+        isInteractJustPressed() {
+            if (this.interactPressed) {
+                this.interactPressed = false;
+                return true;
+            }
+            return false;
+        }
+
+        update() {
+            if (!this.isAnyModalOpenRef.current) this.handleMovement();
+            this.applyBoundaries();
+
+            const moving = this.isMoveUp() || this.isMoveDown() || this.isMoveLeft() || this.isMoveRight();
+            this.playerOffsetY = moving ? Math.sin(Date.now() / 110) * 3.2 : 0;
+            this.playerGraphic.position.set(this.player.x, this.player.y + this.playerOffsetY);
+
+            this.interactablesData.forEach(item => {
+                if (this.bobPhases.has(item.id)) {
+                    const g = this.interactableGraphics.get(item.id);
+                    const phase = this.bobPhases.get(item.id);
+                    const bob = Math.sin(Date.now() / 280 + phase) * 3.8;
+                    g.position.y = item.y + bob;
+                }
+            });
+
+            this.checkInteractions();
+        }
+
+        handleMovement() {
+            let dx = 0, dy = 0;
+            if (this.isMoveUp()) dy -= 1;
+            if (this.isMoveDown()) dy += 1;
+            if (this.isMoveLeft()) dx -= 1;
+            if (this.isMoveRight()) dx += 1;
+            if (dx || dy) {
+                const len = Math.hypot(dx, dy);
+                dx /= len;
+                dy /= len;
+                this.player.x += dx * this.player.speed;
+                this.player.y += dy * this.player.speed;
+            }
+        }
+
+        applyBoundaries() {
+            this.player.x = Math.min(Math.max(this.player.x, this.player.radius), WORLD_WIDTH - this.player.radius);
+            this.player.y = Math.min(Math.max(this.player.y, this.player.radius), WORLD_HEIGHT - this.player.radius);
+        }
+
+        checkInteractions() {
+            let closestDist = Infinity;
+            let closest = null;
+
+            for (const item of this.interactablesData) {
+                const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
+                const threshold = this.player.radius + item.radius + 14;
+                if (dist < threshold && dist < closestDist) {
+                    closestDist = dist;
+                    closest = item;
+                }
+            }
+
+            if (closest) {
+                const g = this.interactableGraphics.get(closest.id);
+                if (this.highlightedGraphic !== g) {
+                    if (this.highlightedGraphic) this.highlightedGraphic.scale.set(1);
+                    g.scale.set(1.13);
+                    this.highlightedGraphic = g;
+                }
+            } else if (this.highlightedGraphic) {
+                this.highlightedGraphic.scale.set(1);
+                this.highlightedGraphic = null;
+            }
+
+            this.closestItem = closest;
+            this.highlightRing.clear();
+            if (closest) {
+                const pulse = 18 + Math.sin(Date.now() / 110) * 4;
+                this.highlightRing.lineStyle(7, 0xffee44, 0.8);
+                this.highlightRing.drawCircle(closest.x, closest.y, closest.radius + pulse);
+            }
+
+            let hint = closest ? `💬 Press [E] to interact with ${closest.name}` : "";
+            this.onUpdateProximityHint(hint);
+
+            if (this.isInteractJustPressed() && closest) this.onInteract(closest.id);
+        }
+
+        destroy() {
+            window.removeEventListener('keydown', this._onKeyDown);
+            window.removeEventListener('keyup', this._onKeyUp);
+            this.app.ticker.stop();
+            this.app.destroy(true);
+        }
+    }
+
+    // ==============================================
+    // 3. REACT COMPONENT (with dynamic canvas scaling)
+    // ==============================================
+    const { useState, useEffect, useRef } = React;
+
+    const PizzaQuestGame = () => {
+        const containerRef = useRef(null);
+        const gameWorldRef = useRef(null);
+
+        // Core stats
+        const [money, setMoney] = useState(0);
+        const [inventory, setInventory] = useState([]);
+        const [karma, setKarma] = useState(50);
+
+        // Quest progression flags
+        const [quest01Completed, setQuest01Completed] = useState(false);
+        const [quest02Started, setQuest02Started] = useState(false);
+        const [quest02Completed, setQuest02Completed] = useState(false);
+        const [letterPosted, setLetterPosted] = useState(false);
+        const [quest03Started, setQuest03Started] = useState(false);
+        const [quest03Completed, setQuest03Completed] = useState(false);
+        const [lockUsed, setLockUsed] = useState(false);
+
+        // UI state
+        const [showShop, setShowShop] = useState(false);
+        const [showNpcDialogue, setShowNpcDialogue] = useState(false);
+        const [showInventory, setShowInventory] = useState(false);
+        const [infoMessage, setInfoMessage] = useState(null);
+        const [choiceModal, setChoiceModal] = useState(null);
+        const [npcDialogueData, setNpcDialogueData] = useState({ text: "", options: [] });
+        const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
+
+        const [karmaFeedback, setKarmaFeedback] = useState(null);
+        const [interactHint, setInteractHint] = useState("");
+        const [objectiveText, setObjectiveText] = useState("🔍 Talk to Gino to start");
+
+        const isAnyModalOpen = useRef(false);
+
+        useEffect(() => {
+            isAnyModalOpen.current = showShop || showNpcDialogue || showInventory || infoMessage || choiceModal;
+        }, [showShop, showNpcDialogue, showInventory, infoMessage, choiceModal]);
+
+        // Update objective text
+        useEffect(() => {
+            if (!quest01Completed) setObjectiveText("🔍 Find Gino and help him with the pizza quest");
+            else if (!quest02Started && !quest02Completed) setObjectiveText("📬 Find Mrs. Gino");
+            else if (quest02Started && !quest02Completed && !letterPosted) setObjectiveText("📮 Post the letter at the Post Office");
+            else if (quest02Started && !quest02Completed && letterPosted) setObjectiveText("💬 Return to Mrs. Gino");
+            else if (!quest03Started && !quest03Completed) setObjectiveText("🔒 Find Tommy near the Factory");
+            else if (quest03Started && !quest03Completed && !lockUsed) setObjectiveText("🏭 Use the lock at the Factory");
+            else if (quest03Started && !quest03Completed && lockUsed) setObjectiveText("💬 Return to Tommy");
+            else setObjectiveText("🏆 All quests completed! Thank you for playing!");
+        }, [quest01Completed, quest02Started, quest02Completed, letterPosted, quest03Started, quest03Completed, lockUsed]);
+
+        // Helper functions
+        const modifyKarma = (delta) => {
+            const newK = Math.min(100, Math.max(0, karma + delta));
+            setKarma(newK);
+            setKarmaFeedback({ text: `${delta > 0 ? "+" : ""}${delta} Karma`, positive: delta > 0 });
+            setTimeout(() => setKarmaFeedback(null), 2400);
+        };
+
+        const addToInventory = (item) => setInventory(prev => [...prev, item]);
+        const removeFromInventory = (id) => setInventory(prev => prev.filter(i => i.id !== id));
+        const hasItem = (id) => inventory.some(i => i.id === id);
+        const showInfoMessage = (text) => setInfoMessage({ text });
+
+        // ---- Quest 1: Pizza (Gino) ----
+        const handleNPCInteraction = () => {
+            if (!quest01Completed) {
+                if (hasItem("pizza")) {
+                    const pizza = inventory.find(i => i.id === "pizza");
+                    const changeLeft = 15 - pizza.price;
+                    if (pizza.price === 15) {
+                        setNpcDialogueData({
+                            text: `Gino: 'Wow! ${pizza.name}? Premium! Thanks!'`,
+                            options: [{ text: "Enjoy!", action: "complete_quest01" }]
+                        });
+                    } else {
+                        setNpcDialogueData({
+                            text: `Gino: 'Ah, ${pizza.name}. Any change from $15?'`,
+                            options: [
+                                { text: `✅ Return $${changeLeft}`, action: "return_change", changeAmount: changeLeft },
+                                { text: `❌ Lie: 'No change!'`, action: "keep_money", changeAmount: changeLeft }
+                            ]
+                        });
+                    }
+                    setShowNpcDialogue(true);
+                } else if (money === 0) {
+                    setMoney(15);
+                    setNpcDialogueData({
+                        text: "Gino: 'Here's $15. Buy me a pizza from Mario!'",
+                        options: [{ text: "Got it!", action: "close" }]
+                    });
+                    setShowNpcDialogue(true);
+                } else {
+                    setNpcDialogueData({
+                        text: "Gino: 'Go buy a pizza already!'",
+                        options: [{ text: "Okay", action: "close" }]
+                    });
+                    setShowNpcDialogue(true);
+                }
+                return;
+            }
+            if (quest01Completed && !quest02Started && !quest02Completed) {
+                setNpcDialogueData({
+                    text: "Gino: 'My wife Mrs. Gino needs help. She's nearby.'",
+                    options: [{ text: "I'll go see her", action: "close" }]
+                });
+                setShowNpcDialogue(true);
+                return;
+            }
+            setNpcDialogueData({ text: "Gino: 'Life is good!'", options: [{ text: "Bye", action: "close" }] });
+            setShowNpcDialogue(true);
+        };
+
+        const handleNpcChoice = (opt) => {
+            if (opt.action === "close") setShowNpcDialogue(false);
+            else if (opt.action === "return_change") {
+                setMoney(money - opt.changeAmount);
+                modifyKarma(10);
+                removeFromInventory("pizza");
+                setQuest01Completed(true);
+                setShowNpcDialogue(false);
+            } else if (opt.action === "keep_money") {
+                modifyKarma(-20);
+                removeFromInventory("pizza");
+                setQuest01Completed(true);
+                setShowNpcDialogue(false);
+            } else if (opt.action === "complete_quest01") {
+                removeFromInventory("pizza");
+                setQuest01Completed(true);
+                setShowNpcDialogue(false);
+            }
+        };
+
+        // ---- Quest 2: Mrs. Gino (Letter) ----
+        const handleMrsGinoInteraction = () => {
+            if (!quest01Completed) {
+                setNpcDialogueData({ text: "Mrs. Gino: 'Come back later!'", options: [{ text: "Okay", action: "close" }] });
+                setShowNpcDialogue(true);
+                return;
+            }
+            if (quest02Completed) {
+                setNpcDialogueData({ text: "Mrs. Gino: 'Thank you so much!'", options: [{ text: "My pleasure", action: "close" }] });
+                setShowNpcDialogue(true);
+                return;
+            }
+            if (quest02Started && letterPosted) {
+                setMoney(money + 2);
+                setQuest02Completed(true);
+                setQuest02Started(false);
+                setNpcDialogueData({ text: "Mrs. Gino: 'Here's $2 for your help!'", options: [{ text: "You're welcome", action: "close" }] });
+                setShowNpcDialogue(true);
+                return;
+            }
+            if (quest02Started && !letterPosted) {
+                setNpcDialogueData({ text: "Mrs. Gino: 'Go post the letter!'", options: [{ text: "On my way", action: "close" }] });
+                setShowNpcDialogue(true);
+                return;
+            }
+            if (!quest02Started) {
+                addToInventory({ id: "letter", name: "Letter" });
+                setQuest02Started(true);
+                setNpcDialogueData({ text: "Mrs. Gino: 'Please post this letter! (added to inventory)'", options: [{ text: "I'll do it", action: "close" }] });
+                setShowNpcDialogue(true);
+            }
+        };
+
+        // ---- Quest 3: Tommy (Lock) ----
+        const handleTommyInteraction = () => {
+            if (!quest02Completed) {
+                setNpcDialogueData({ text: "Tommy: 'Mom says stay away from strangers!'", options: [{ text: "Okay", action: "close" }] });
+                setShowNpcDialogue(true);
+                return;
+            }
+            if (quest03Completed) {
+                setNpcDialogueData({ text: "Tommy: 'Thanks again!'", options: [{ text: "Anytime", action: "close" }] });
+                setShowNpcDialogue(true);
+                return;
+            }
+            if (quest03Started && lockUsed) {
+                setChoiceModal({
+                    text: "Tommy: 'Thanks! Want this premium cigarette?'",
+                    choices: [
+                        { text: "Accept", action: "accept_cigarette" },
+                        { text: "Reject", action: "reject_cigarette" }
+                    ]
+                });
+                return;
+            }
+            if (quest03Started && !lockUsed) {
+                setNpcDialogueData({ text: "Tommy: 'Did you lock the factory yet?'", options: [{ text: "I'll go now", action: "close" }] });
+                setShowNpcDialogue(true);
+                return;
+            }
+            if (!quest03Started) {
+                addToInventory({ id: "lock", name: "Lock" });
+                setQuest03Started(true);
+                setNpcDialogueData({ text: "Tommy: 'Lock the factory door for me! (lock added)'", options: [{ text: "I'll handle it", action: "close" }] });
+                setShowNpcDialogue(true);
+            }
+        };
+
+        const handleCigaretteChoice = (action) => {
+            if (action === "accept_cigarette") addToInventory({ id: "cigarette", name: "Premium Cigarette" });
+            showInfoMessage(action === "accept_cigarette" ? "Cigarette added!" : "You refused politely.");
+            setChoiceModal(null);
+            setQuest03Completed(true);
+        };
+
+        // ---- Shop ----
+        const handleShopInteraction = () => {
+            if (!quest01Completed && !hasItem("pizza") && money >= 10) {
+                setShowShop(true);
+            } else if (hasItem("pizza")) {
+                setNpcDialogueData({ text: "You already have a pizza!", options: [{ text: "Okay", action: "close" }] });
+                setShowNpcDialogue(true);
+            } else {
+                setNpcDialogueData({ text: "Shopkeeper: 'Come back with money!'", options: [{ text: "Leave", action: "close" }] });
+                setShowNpcDialogue(true);
+            }
+        };
+
+        const buyPizza = (pizza) => {
+            if (money >= pizza.price && !hasItem("pizza")) {
+                setMoney(money - pizza.price);
+                addToInventory({ id: "pizza", name: pizza.name, price: pizza.price });
+                setShowShop(false);
+                showInfoMessage(`🍕 ${pizza.name} added!`);
+            }
+        };
+
+        // ---- Post Office (Quest 2) ----
+        const handlePostOffice = () => {
+            if (quest02Started && !letterPosted && hasItem("letter")) {
+                setChoiceModal({
+                    text: "Postbox — what do you do?",
+                    choices: [
+                        { text: "📖 Read letter (wrong)", action: "read_letter" },
+                        { text: "📮 Post it", action: "post_letter" }
+                    ]
+                });
+            } else {
+                showInfoMessage("Nothing to do here right now.");
+            }
+        };
+
+        const handleLetterChoice = (action) => {
+            if (action === "read_letter") modifyKarma(-5);
+            removeFromInventory("letter");
+            setLetterPosted(true);
+            showInfoMessage(action === "read_letter" ? "📜 You read it... felt guilty." : "📮 Letter posted.");
+            setChoiceModal(null);
+        };
+
+        // ---- Factory (Quest 3) ----
+        const handleFactory = () => {
+            if (quest03Started && !lockUsed && hasItem("lock")) {
+                removeFromInventory("lock");
+                setLockUsed(true);
+                showInfoMessage("🔒 Factory door secured.");
+            } else {
+                showInfoMessage("Factory is already locked.");
+            }
+        };
+
+        // ---- Central interaction dispatcher ----
+        const handleInteract = (id) => {
+            if (id === 'npc') handleNPCInteraction();
+            else if (id === 'shop') handleShopInteraction();
+            else if (id === 'postoffice') handlePostOffice();
+            else if (id === 'factory') handleFactory();
+            else if (id === 'mrsGino') handleMrsGinoInteraction();
+            else if (id === 'tommy') handleTommyInteraction();
+            else showInfoMessage("You interact, but nothing happens.");
+        };
+
+        // ---- Interactable data (scaled to new world size) ----
+        // Original positions (1100x620) were: 
+        // npc 280,190; mrsGino 350,250; tommy 180,550; shop 920,480; postoffice 840,550; factory 120,480
+        // Scale to 1280x720: factor X = 1280/1100 ≈ 1.1636, Y = 720/620 ≈ 1.1613
+        const scaleX = 1280 / 1100;
+        const scaleY = 720 / 620;
+        const interactablesData = [
+            { id: 'npc',     x: Math.round(280 * scaleX), y: Math.round(190 * scaleY), name: 'Gino',     radius: 20, color: 0x2ecc71, icon: "💬" },
+            { id: 'mrsGino', x: Math.round(350 * scaleX), y: Math.round(250 * scaleY), name: 'Mrs. Gino', radius: 19, color: 0xe84393, icon: "👩" },
+            { id: 'tommy',   x: Math.round(180 * scaleX), y: Math.round(550 * scaleY), name: 'Tommy',    radius: 17, color: 0xf39c12, icon: "🧒" },
+            { id: 'shop',    x: Math.round(920 * scaleX), y: Math.round(480 * scaleY), name: 'Pizza Shop', radius: 22, color: 0xcd7f32, icon: "🍕" },
+            { id: 'postoffice', x: Math.round(840 * scaleX), y: Math.round(550 * scaleY), name: 'Post Office', radius: 20, color: 0x3498db, icon: "📬" },
+            { id: 'factory', x: Math.round(120 * scaleX), y: Math.round(480 * scaleY), name: 'Factory',    radius: 22, color: 0x95a5a6, icon: "🏭" }
+        ];
+
+        // ---- Pixi initialization + dynamic scaling to container ----
+        useEffect(() => {
+            if (!containerRef.current) return;
+
+            const app = new PIXI.Application({
+                width: WORLD_WIDTH,
+                height: WORLD_HEIGHT,
+                backgroundColor: 0x0f2a1f,
+                antialias: true,
+                resolution: Math.min(window.devicePixelRatio || 1, 2)
+            });
+            containerRef.current.appendChild(app.view);
+
+            const world = new GameWorld(app, interactablesData, handleInteract, (hint) => setInteractHint(hint), isAnyModalOpen);
+            gameWorldRef.current = world;
+
+            // Function to scale canvas to fit container
+            const scaleCanvas = () => {
+                const container = containerRef.current;
+                if (!container) return;
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+                const scale = Math.min(containerWidth / WORLD_WIDTH, containerHeight / WORLD_HEIGHT);
+                const newWidth = WORLD_WIDTH * scale;
+                const newHeight = WORLD_HEIGHT * scale;
+                app.view.style.width = `${newWidth}px`;
+                app.view.style.height = `${newHeight}px`;
+            };
+
+            // Initial scale
+            scaleCanvas();
+
+            // Use ResizeObserver to detect container size changes
+            const resizeObserver = new ResizeObserver(() => scaleCanvas());
+            resizeObserver.observe(containerRef.current);
+
+            // Also listen to window resize for safety
+            window.addEventListener('resize', scaleCanvas);
+
+            return () => {
+                resizeObserver.disconnect();
+                window.removeEventListener('resize', scaleCanvas);
+                if (gameWorldRef.current) gameWorldRef.current.destroy();
+                if (app.view && containerRef.current?.contains(app.view)) containerRef.current.removeChild(app.view);
+            };
+        }, []);
+
+        // Keep callbacks fresh
+        const handleInteractRef = useRef(handleInteract);
+        useEffect(() => { handleInteractRef.current = handleInteract; }, [handleInteract]);
+        useEffect(() => {
+            if (gameWorldRef.current) gameWorldRef.current.onInteract = (id) => handleInteractRef.current(id);
+        });
+
+        // Dialogue keyboard navigation
+        useEffect(() => {
+            if (!showNpcDialogue || !npcDialogueData.options?.length) return;
+            setSelectedOptionIndex(0);
+            const kd = (e) => {
+                if (e.code === 'ArrowUp') {
+                    e.preventDefault();
+                    setSelectedOptionIndex(p => (p - 1 + npcDialogueData.options.length) % npcDialogueData.options.length);
+                } else if (e.code === 'ArrowDown') {
+                    e.preventDefault();
+                    setSelectedOptionIndex(p => (p + 1) % npcDialogueData.options.length);
+                } else if (e.code === 'Enter') {
+                    e.preventDefault();
+                    const sel = npcDialogueData.options[selectedOptionIndex];
+                    if (sel) handleNpcChoice(sel);
+                }
+            };
+            window.addEventListener('keydown', kd);
+            return () => window.removeEventListener('keydown', kd);
+        }, [showNpcDialogue, npcDialogueData.options, selectedOptionIndex]);
+
+        // Helper for UI
+        const getKarmaLabel = () => {
+            if (karma >= KARMA_GOOD) return "Good 😇";
+            if (karma <= KARMA_EVIL) return "Evil 😈";
+            return "Neutral 😐";
+        };
+
+        return React.createElement('div', { className: "app-layout" },
+            // LEFT PANEL (Stats)
+            React.createElement('div', { className: "left-panel" },
+                React.createElement('div', { className: "stat-card" },
+                    React.createElement('div', { className: "stat-title" }, "❤️ HEALTH"),
+                    React.createElement('div', { className: "health-bar" }, React.createElement('div', { className: "health-fill" }))
+                ),
+                React.createElement('div', { className: "stat-card" },
+                    React.createElement('div', { className: "stat-title" }, "⚖️ KARMA"),
+                    React.createElement('div', { className: "karma-bar" }, React.createElement('div', { className: "karma-fill", style: { width: `${karma}%`, background: karma >= 66 ? "#4caf50" : karma <= 34 ? "#e74c3c" : "#f5b042" } })),
+                    React.createElement('div', { className: "stat-value", style: { marginTop: '8px' } }, getKarmaLabel())
+                ),
+                React.createElement('div', { className: "stat-card" },
+                    React.createElement('div', { className: "stat-title" }, "💰 MONEY"),
+                    React.createElement('div', { className: "stat-value" }, `$${money}`)
+                ),
+                React.createElement('div', { className: "stat-card" },
+                    React.createElement('div', { className: "stat-title" }, "📦 INVENTORY"),
+                    React.createElement('div', { className: "inventory-list" },
+                        inventory.length === 0 ? "Empty" : inventory.map((it, i) => React.createElement('div', { key: i, className: "inventory-item" }, it.name + (it.price ? ` ($${it.price})` : '')))
+                    ),
+                    React.createElement('div', { className: "inventory-btn", onClick: () => setShowInventory(true) }, "Open Inventory")
+                )
+            ),
+
+            // CENTER: Game canvas (flexible)
+            React.createElement('div', { className: "game-container", ref: containerRef }),
+
+            // RIGHT PANEL (Objective & Interact Hint)
+            React.createElement('div', { className: "right-panel" },
+                React.createElement('div', { className: "objective-box" },
+                    React.createElement('div', { className: "objective-title" }, "📍 CURRENT OBJECTIVE"),
+                    React.createElement('div', { className: "objective-text" }, objectiveText)
+                ),
+                React.createElement('div', { className: "info-area" },
+                    React.createElement('div', { className: "interact-hint-static" }, interactHint || "✨ Explore the world"),
+                    React.createElement('div', { className: "controls-tip-static" }, "WASD Move • E Interact • ↑↓ Enter (dialogue)")
+                )
+            ),
+
+            // Modals (unchanged)
+            showShop && React.createElement('div', { className: "modal-overlay", onClick: () => setShowShop(false) },
+                React.createElement('div', { className: "modal", onClick: e => e.stopPropagation() },
+                    React.createElement('h3', null, "🍕 Mario's Pizza"),
+                    React.createElement('div', { style: { marginBottom: '14px' } }, `Money: $${money}`),
+                    PIZZA_MENU.map(p => React.createElement('div', { key: p.id, className: "pizza-option", onClick: () => buyPizza(p) }, `${p.name} — $${p.price}`)),
+                    React.createElement('div', { className: "close-btn", onClick: () => setShowShop(false) }, "Cancel")
+                )
+            ),
+
+            showNpcDialogue && React.createElement('div', { className: "modal-overlay", onClick: () => setShowNpcDialogue(false) },
+                React.createElement('div', { className: "modal", onClick: e => e.stopPropagation() },
+                    React.createElement('div', { className: "dialogue-text" }, npcDialogueData.text),
+                    npcDialogueData.options.map((opt, i) => React.createElement('div', { key: i, className: `dialogue-option ${i === selectedOptionIndex ? 'selected' : ''}`, onClick: () => handleNpcChoice(opt) }, opt.text))
+                )
+            ),
+
+            showInventory && React.createElement('div', { className: "modal-overlay", onClick: () => setShowInventory(false) },
+                React.createElement('div', { className: "modal", onClick: e => e.stopPropagation() },
+                    React.createElement('h3', null, "🎒 Inventory"),
+                    inventory.length === 0 ? React.createElement('div', { style: { padding: '30px', textAlign: 'center', color: '#777' } }, "Empty") :
+                    inventory.map((it, i) => React.createElement('div', { key: i, className: "inventory-item-modal" }, it.name + (it.price ? ` ($${it.price})` : ''))),
+                    React.createElement('div', { className: "close-btn", onClick: () => setShowInventory(false) }, "Close")
+                )
+            ),
+
+            infoMessage && React.createElement('div', { className: "modal-overlay", onClick: () => setInfoMessage(null) },
+                React.createElement('div', { className: "modal", onClick: e => e.stopPropagation() },
+                    React.createElement('div', { className: "dialogue-text" }, infoMessage.text),
+                    React.createElement('div', { className: "close-btn", onClick: () => setInfoMessage(null) }, "OK")
+                )
+            ),
+
+            choiceModal && React.createElement('div', { className: "modal-overlay", onClick: () => setChoiceModal(null) },
+                React.createElement('div', { className: "modal", onClick: e => e.stopPropagation() },
+                    React.createElement('div', { className: "dialogue-text" }, choiceModal.text),
+                    choiceModal.choices.map((c, i) => React.createElement('div', { key: i, className: "quest-choice", onClick: () => {
+                        if (c.action === "read_letter") handleLetterChoice("read_letter");
+                        else if (c.action === "post_letter") handleLetterChoice("post_letter");
+                        else if (c.action === "accept_cigarette") handleCigaretteChoice("accept_cigarette");
+                        else if (c.action === "reject_cigarette") handleCigaretteChoice("reject_cigarette");
+                    } }, c.text)),
+                    React.createElement('div', { className: "close-btn", onClick: () => setChoiceModal(null) }, "Cancel")
+                )
+            ),
+
+            karmaFeedback && React.createElement('div', { className: `karma-feedback ${karmaFeedback.positive ? 'positive' : 'negative'}` }, karmaFeedback.text)
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(PizzaQuestGame));
+</script>
+</body>
+</html>
