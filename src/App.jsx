@@ -10,6 +10,7 @@ import quest1 from './data/quests/quest1.json';
 import quest2 from './data/quests/quest2.json';
 import quest3 from './data/quests/quest3.json';
 
+
 import { LeftPanel } from './components/LeftPanel';
 import { RightPanel } from './components/RightPanel';
 import { ShopModal } from './components/modals/ShopModal';
@@ -51,7 +52,7 @@ export default function App() {
 
     // 1. Initialize Quest Manager
     useEffect(() => {
-        const allQuests = [quest1, quest2, quest3];
+        const allQuests = [quest1, quest2, quest3 ];
         
         questManagerRef.current = new QuestManager(allQuests, (event) => {
             if (event.type === 'UPDATE_MONEY') setMoney(prev => prev + event.amount);

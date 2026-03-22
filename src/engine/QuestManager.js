@@ -74,6 +74,8 @@ export class QuestManager {
     }
 
     handleAction(action) {
+
+
         if (!action || action.type === 'CLOSE') return;
 
         if (action.giveItem) this.onGameStateUpdate({ type: 'ADD_ITEM', item: action.giveItem });
@@ -98,6 +100,8 @@ export class QuestManager {
                 break;
         }
     }
+
+    
 
     _startQuest(questId) {
         const quest = this.quests.find(q => q.id === questId);
