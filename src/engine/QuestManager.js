@@ -12,6 +12,7 @@ export class QuestManager {
         this.checkQuestProgress();
     }
 
+   
     getDialogueForTarget(targetId) {
         // 1. Check completed quests for post-completion text
         for (const quest of this.quests) {
@@ -29,10 +30,12 @@ export class QuestManager {
             if (quest.giver === targetId) {
                 const currentStep = quest.steps[quest.currentStep];
                 
-                // Is quest ready to complete?
-                if (quest.currentStep >= quest.steps.length) {
+                // ✨ FIX EKA METHANAI ✨
+                // Player inna step eka anthima step eka nam saha target eka me NPC nam, quest eka iwarai!
+                if (currentStep && quest.currentStep === quest.steps.length - 1 && currentStep.target === targetId) {
                     return this._getCompletionDialogue(quest);
                 }
+                
                 // Quest is active but not complete
                 return { text: quest.activeDialogue.text, options: quest.activeDialogue.options };
             }
