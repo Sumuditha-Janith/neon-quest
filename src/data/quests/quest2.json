@@ -1,0 +1,24 @@
+{
+    "id": "q2",
+    "title": "Mrs. Gino's Letter",
+    "giver": "mrsGino",
+    "prerequisite": "q1",
+    "busyText": "Mrs. Gino: 'Come back later!'",
+    "startDialogue": {
+        "text": "Mrs. Gino: 'Please post this letter! (added to inventory)'",
+        "options": [{ "text": "I'll do it", "action": { "type": "START_QUEST", "questId": "q2", "giveItem": {"id": "letter", "name": "Letter"} } }]
+    },
+    "activeDialogue": {
+        "text": "Mrs. Gino: 'Go post the letter!'",
+        "options": [{ "text": "On my way", "action": { "type": "CLOSE" } }]
+    },
+    "steps": [
+        { "target": "postoffice", "condition": { "type": "FLAG_TRUE", "flagId": "letterPosted" } },
+        { "target": "mrsGino", "condition": { "type": "INTERACT" } }
+    ],
+    "completionDialogue": {
+        "text": "Mrs. Gino: 'Here's $2 for your help!'",
+        "options": [{ "text": "You're welcome", "action": { "type": "COMPLETE_QUEST", "questId": "q2", "rewardMoney": 2 } }]
+    },
+    "postCompletionText": "Mrs. Gino: 'Thank you so much!'"
+}

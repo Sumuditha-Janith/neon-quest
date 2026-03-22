@@ -1,0 +1,18 @@
+{
+    "id": "q1",
+    "title": "Gino's Hunger",
+    "giver": "npc",
+    "startDialogue": {
+        "text": "Gino: 'Here's $15. Buy me a pizza from Mario!'",
+        "options": [{ "text": "Got it!", "action": { "type": "START_Q1" } }]
+    },
+    "activeDialogue": {
+        "text": "Gino: 'Go buy a pizza already!'",
+        "options": [{ "text": "Okay", "action": { "type": "CLOSE" } }]
+    },
+    "steps": [
+        { "target": "shop", "condition": { "type": "HAS_ITEM", "itemId": "pizza" } },
+        { "target": "npc", "condition": { "type": "INTERACT" } }
+    ],
+    "postCompletionText": "Gino: 'My wife Mrs. Gino needs help. She's nearby.'"
+}

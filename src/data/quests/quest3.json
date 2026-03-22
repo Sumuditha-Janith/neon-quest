@@ -1,0 +1,27 @@
+{
+    "id": "q3",
+    "title": "Tommy's Factory",
+    "giver": "tommy",
+    "prerequisite": "q2",
+    "busyText": "Tommy: 'Mom says stay away from strangers!'",
+    "startDialogue": {
+        "text": "Tommy: 'Lock the factory door for me! (lock added)'",
+        "options": [{ "text": "I'll handle it", "action": { "type": "START_QUEST", "questId": "q3", "giveItem": {"id": "lock", "name": "Lock"} } }]
+    },
+    "activeDialogue": {
+        "text": "Tommy: 'Did you lock the factory yet?'",
+        "options": [{ "text": "I'll go now", "action": { "type": "CLOSE" } }]
+    },
+    "steps": [
+        { "target": "factory", "condition": { "type": "FLAG_TRUE", "flagId": "lockUsed" } },
+        { "target": "tommy", "condition": { "type": "INTERACT" } }
+    ],
+    "completionDialogue": {
+        "text": "Tommy: 'Thanks! Want this premium cigarette?'",
+        "options": [
+            { "text": "Accept", "action": { "type": "COMPLETE_QUEST", "questId": "q3", "giveItem": {"id": "cigarette", "name": "Premium Cigarette"} } },
+            { "text": "Reject", "action": { "type": "COMPLETE_QUEST", "questId": "q3" } }
+        ]
+    },
+    "postCompletionText": "Tommy: 'Thanks again!'"
+}
